@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rifle Shooting Log</title>
+    <!-- Fonts and Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js for graphing -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- Login View - Updated for OAuth -->
+    <div id="login-wrapper">
+        <div class="login-container">
+            <h1>Rifle Log</h1>
+            <p>Log in with your school account to continue.</p>
+            <button id="login-btn" class="btn btn-primary">Login with School Account</button>
+            <p id="login-error" class="hidden" style="color: #ff8b8b; margin-top: 15px;"></p>
+        </div>
+    </div>
+
+    <!-- Main App View (hidden by default) -->
+    <div id="app-wrapper" class="hidden">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Rifle Log</h2>
+            </div>
+            <nav>
+                <a href="#" class="nav-link active"><i data-feather="target"></i> Dashboard</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <span id="current-user-display"></span>
+                    <button id="logout-btn" class="btn-icon" title="Logout"><i data-feather="log-out"></i></button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="main-header">
+                <h1>Dashboard</h1>
+            </header>
+
+            <section id="measurements-section" class="card">
+                <h2><i data-feather="tool"></i> Setup & Measurements</h2>
+                <form id="measurements-form" class="grid-form">
+                    <div class="form-group"><label for="rifle">Rifle:</label><input type="text" id="rifle" name="rifle"></div>
+                    <div class="form-group">
+                        <label for="ammunition">Ammunition:</label>
+                        <select id="ammunition" name="ammunition">
+                            <option value="CCI">CCI</option>
+                            <option value="ELEY Training">ELEY Training</option>
+                            <option value="ELEY Match">ELEY Match</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label for="trigger-to-handstop">Trigger to handstop (cm):</label><input type="text" id="trigger-to-handstop" name="triggerToHandstop"></div>
+                    <div class="form-group"><label for="trigger-to-buttplate">Trigger to buttplate (cm):</label><input type="text" id="trigger-to-buttplate" name="triggerToButtplate"></div>
+                    <div class="form-group"><label for="cheekpiece-height">Cheekpiece height (cm):</label><input type="text" id="cheekpiece-height" name="cheekpieceHeight"></div>
+                    <div class="form-group"><label for="sling-length">Sling length (cm):</label><input type="text" id="sling-length" name="slingLength"></div>
+                    <div class="form-group"><label for="sling-height">Sling height (cm):</label><input type="text" id="sling-height" name="slingHeight"></div>
+                    <div class="form-group"><label for="jacket-size">Jacket size:</label><input type="text" id="jacket-size" name="jacketSize"></div>
+                </form>
+            </section>
+            
+            <div class="content-grid">
+                <div class="grid-col-span-2">
+                    <section id="logging-section" class="card">
+                        <h2><i data-feather="plus-circle"></i> Log New Shoot</h2>
+                        <form id="log-form">
+                            <div class="form-group">
+                                 <fieldset><legend>Number of Shots:</legend>
+                                    <label><input type="radio" name="shot-count" value="10" checked> 10</label>
+                                    <label><input type="radio" name="shot-count" value="20"> 20</label>
+                                    <label><input type="radio" name="shot-count" value="60"> 60</label>
+                                </fieldset>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group flex-grow">
+                                    <label for="total-score">Total Score:</label>
+                                    <input type="number" id="total-score" step="0.1" required placeholder="e.g., 98.5">
+                                </div>
+                                <div class="form-group">
+                                    <label for="decimal-scoring">Decimals?</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="decimal-scoring" name="decimalScoring" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group"><label for="feedback">Feedback:</label><textarea id="feedback" rows="3"></textarea></div>
+                            <div class="form-group"><label for="comments">Comments:</label><textarea id="comments" rows="3"></textarea></div>
+                            <button type="submit" class="btn btn-primary">Log Shoot</button>
+                        </form>
+                    </section>
+                </div>
+
+                <div class="grid-col-span-1">
+                    <section id="stats-section" class="card">
+                        <h2><i data-feather="bar-chart-2"></i> Statistics</h2>
+                        <div class="stat-item"><span>Avg. Last 60 Shots:</span><strong id="avg-60">N/A</strong></div>
+                        <div class="stat-item"><span>Avg. Last 300 Shots:</span><strong id="avg-300">N/A</strong></div>
+                        <div class="stat-item"><span>Best 10-Shot Session Avg:</span><strong id="best-10-avg">N/A</strong></div>
+                    </section>
+                </div>
+                
+                <div class="grid-col-span-3">
+                    <section id="graph-section" class="card">
+                        <h2><i data-feather="trending-up"></i> Performance Trend</h2>
+                        <canvas id="score-chart"></canvas>
+                    </section>
+                </div>
+
+                <div class="grid-col-span-3">
+                    <section id="log-history-section" class="card">
+                        <h2><i data-feather="archive"></i> Log History</h2>
+                        <div id="log-history-container"></div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
