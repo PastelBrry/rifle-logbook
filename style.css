@@ -123,7 +123,7 @@ legend { padding: 0 8px; color: var(--text-secondary); }
 .form-row { display: flex; gap: 16px; align-items: flex-end; }
 .flex-grow { flex-grow: 1; }
 
-/* --- NEW: Toggle Switch Styles --- */
+/* --- Toggle Switch Styles --- */
 .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
 .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-tertiary); transition: .4s; border-radius: 24px; border: 1px solid var(--border-color); }
@@ -163,7 +163,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 .log-entry-body p { margin: 4px 0; color: var(--text-secondary); }
 .log-entry-body strong { color: var(--text-primary); font-weight: 500; }
 
-/* --- NEW: Score Type Badge --- */
+/* --- Score Type Badge --- */
 .score-type {
     font-size: 10px;
     font-weight: 600;

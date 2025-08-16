@@ -11,10 +11,25 @@ document.addEventListener('DOMContentLoaded', () => {
         alert(message);
     }
 
+    // --- ⬇️ 1. PASTE YOUR FIREBASE CONFIG OBJECT HERE ⬇️ ---
+    const firebaseConfig = {
+    apiKey: "AIzaSyDdy986ysjeRzyUKrn60esd_YP5bMYrTmg",
+    authDomain: "markr-app-e1aae.firebaseapp.com",
+    projectId: "markr-app-e1aae",
+    storageBucket: "markr-app-e1aae.firebasestorage.app",
+    messagingSenderId: "933217486480",
+    appId: "1:933217486480:web:c5ee51cbd0234c8e883a15",
+    measurementId: "G-PBB2KK8B8T"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore(); // Get a reference to the Firestore service
+
     // --- OAuth 2.0 Configuration ---
     const OAUTH_CONFIG = {
         clientId: '01k2ps6rwmewxtr69wqad8j41a', 
-        redirectUri: 'http://127.0.0.1:3000/markr/index.html',
+        redirectUri: 'https://pastelbrry.github.io/rifle-logbook/', // 👈 UPDATE THIS to your GitHub Pages URL
         authorizationEndpoint: 'https://auth.sbhs.net.au/authorize',
         tokenEndpoint: 'https://auth.sbhs.net.au/token',
         apiEndpoint: 'https://student.sbhs.net.au/api/details/userinfo.json',
@@ -28,9 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- App State ---
     let shoots = [], measurements = {}, scoreChart = null, currentUser = null;
 
-    const LS_SHOOTS_PREFIX = 'markr_shoots_';
-    const LS_MEASUREMENTS_PREFIX = 'markr_measurements_';
-
     // --- PKCE Helper Functions ---
     const generateRandomString = (length) => {
         const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
@@ -41,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const sha256 = (plain) => new TextEncoder().encode(plain);
     
-    // FIXED: Corrected typo from UintArray to Uint8Array
     const base64urlencode = (a) => btoa(String.fromCharCode.apply(null, new Uint8Array(a)))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
@@ -127,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const userProfile = await fetchUserProfile(accessToken);
         if (userProfile) {
             currentUser = userProfile.id;
-            initializeApp(userProfile.name);
+            await initializeApp(userProfile.name); // Wait for app initialization
         } else {
             loginWrapper.classList.remove('hidden');
             appWrapper.classList.add('hidden');
@@ -155,41 +166,82 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- APP INITIALIZATION ---
-    const initializeApp = (displayName) => {
+    // --- APP INITIALIZATION (MODIFIED) ---
+    const initializeApp = async (displayName) => {
         loginWrapper.classList.add('hidden');
         appWrapper.classList.remove('hidden');
         currentUserDisplay.textContent = displayName;
-        loadData();
+        
+        await loadData(); // Load data from Firestore
+        
         renderAll();
         feather.replace();
     };
     
-    // --- DATA HANDLING ---
-    const saveData = () => { 
+    // --- ⬇️ DATA HANDLING (REFACTORED FOR FIRESTORE) ⬇️ ---
+
+    const loadData = async () => { 
         if (!currentUser) return; 
-        localStorage.setItem(LS_SHOOTS_PREFIX + currentUser, JSON.stringify(shoots)); 
-        localStorage.setItem(LS_MEASUREMENTS_PREFIX + currentUser, JSON.stringify(measurements)); 
+        
+        try {
+            const measurementsRef = db.collection('users').doc(currentUser).collection('data').doc('measurements');
+            const measurementsDoc = await measurementsRef.get();
+            measurements = measurementsDoc.exists ? measurementsDoc.data() : {};
+
+            const shootsRef = db.collection('users').doc(currentUser).collection('shoots').orderBy('id', 'desc');
+            const shootsSnapshot = await shootsRef.get();
+            shoots = shootsSnapshot.docs.map(doc => doc.data());
+        } catch (error) {
+            console.error("Error loading data from Firestore: ", error);
+            alert("Could not load your data. Please check the console for errors.");
+        }
+    };
+
+    const saveMeasurements = async () => {
+        if (!currentUser) return;
+        try {
+            const measurementsRef = db.collection('users').doc(currentUser).collection('data').doc('measurements');
+            await measurementsRef.set(measurements, { merge: true });
+        } catch (error) {
+            console.error("Error saving measurements: ", error);
+        }
+    };
+
+    const addShoot = async (shootData) => {
+        if (!currentUser) return;
+        try {
+            // Firestore will auto-generate a unique ID for the document.
+            // We still store our own timestamp `id` inside the document for sorting.
+            const shootsCollectionRef = db.collection('users').doc(currentUser).collection('shoots');
+            await shootsCollectionRef.add(shootData);
+        } catch (error) {
+            console.error("Error adding shoot: ", error);
+        }
     };
     
-    const loadData = () => { 
-        if (!currentUser) return; 
-        const shootsData = localStorage.getItem(LS_SHOOTS_PREFIX + currentUser); 
-        const measurementsData = localStorage.getItem(LS_MEASUREMENTS_PREFIX + currentUser); 
-        shoots = shootsData ? JSON.parse(shootsData) : []; 
-        measurements = measurementsData ? JSON.parse(measurementsData) : {}; 
-    };
-    
-    const deleteShoot = (id) => { 
-        const shootId = parseInt(id, 10); 
+    const deleteShoot = async (id) => { 
+        if (!currentUser) return;
         if (confirm('Are you sure you want to delete this log entry?')) { 
-            shoots = shoots.filter(shoot => shoot.id !== shootId); 
-            saveData(); 
-            renderAll(); 
+            try {
+                const shootQuery = db.collection('users').doc(currentUser).collection('shoots').where('id', '==', id);
+                const shootSnapshot = await shootQuery.get();
+                
+                if (!shootSnapshot.empty) {
+                    const docIdToDelete = shootSnapshot.docs[0].id;
+                    await db.collection('users').doc(currentUser).collection('shoots').doc(docIdToDelete).delete();
+                    
+                    await loadData();
+                    renderAll();
+                } else {
+                    console.error("Could not find shoot with that ID to delete.");
+                }
+            } catch (error) {
+                console.error("Error deleting shoot: ", error);
+            }
         } 
     };
 
-    // --- RENDERING ---
+    // --- ⬇️ RENDERING (NO CHANGES NEEDED) ⬇️ ---
     const renderAll = () => { 
         populateMeasurementsForm(); 
         renderLogHistory(); 
@@ -211,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return; 
         } 
         
-        [...shoots].reverse().forEach(shoot => { 
+        shoots.forEach(shoot => { // `shoots` is already sorted by date from Firestore query
             const avgScore = shoot.totalScore / shoot.shotCount; 
             const readableDate = new Date(shoot.id).toLocaleString(undefined, { 
                 dateStyle: 'medium', 
@@ -266,11 +318,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderGraph = () => { 
         if (scoreChart) scoreChart.destroy(); 
         
-        const labels = shoots.map(s => new Date(s.id).toLocaleDateString(undefined, { 
+        // Reverse the shoots array for chronological order in the graph
+        const chronologicalShoots = [...shoots].reverse();
+        const labels = chronologicalShoots.map(s => new Date(s.id).toLocaleDateString(undefined, { 
             month: 'short', 
             day: 'numeric' 
         })); 
-        const data = shoots.map(s => s.totalScore / s.shotCount); 
+        const data = chronologicalShoots.map(s => s.totalScore / s.shotCount); 
         
         let suggestedMin = 5; 
         let suggestedMax = 10.5; 
@@ -318,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }); 
     };
 
-    // --- EVENT LISTENERS ---
+    // --- ⬇️ EVENT LISTENERS (MODIFIED) ⬇️ ---
     const setupEventListeners = () => {
         loginBtn.addEventListener('click', redirectToLogin);
         
@@ -329,10 +383,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         measurementsForm.addEventListener('input', (e) => { 
             measurements[e.target.name] = e.target.value; 
-            saveData(); 
+            saveMeasurements(); // This is now a simple call
         });
         
-        logForm.addEventListener('submit', (e) => { 
+        logForm.addEventListener('submit', async (e) => { // Now async
             e.preventDefault(); 
             const totalScoreInput = document.getElementById('total-score'); 
             const totalScore = parseFloat(totalScoreInput.value); 
@@ -359,25 +413,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 comments: document.getElementById('comments').value.trim(), 
             }; 
             
-            shoots.push(newShoot); 
-            saveData(); 
+            await addShoot(newShoot); 
+            await loadData(); // Reload data from Firestore
             renderAll(); 
+
             logForm.reset(); 
             document.getElementById('decimal-scoring').checked = true; 
             totalScoreInput.focus(); 
         });
         
-        logHistoryContainer.addEventListener('click', (e) => { 
+        logHistoryContainer.addEventListener('click', async (e) => { // Now async
             const deleteBtn = e.target.closest('.btn-delete'); 
             if (deleteBtn) { 
-                deleteShoot(deleteBtn.dataset.id); 
+                const shootId = parseInt(deleteBtn.dataset.id, 10);
+                await deleteShoot(shootId);
             } 
         });
     };
 
     // --- App Entry Point ---
     const main = () => {
-        // FIXED: Assign element variables now that the DOM is loaded
         loginWrapper = document.getElementById('login-wrapper');
         appWrapper = document.getElementById('app-wrapper');
         loginBtn = document.getElementById('login-btn');
@@ -392,18 +447,14 @@ document.addEventListener('DOMContentLoaded', () => {
         best10AvgSpan = document.getElementById('best-10-avg');
         chartCanvas = document.getElementById('score-chart');
 
-        // FIXED: Check that all required elements exist before proceeding
         if (!loginWrapper || !appWrapper || !loginBtn || !measurementsForm) {
             console.error('Critical DOM elements are missing. Check your HTML structure.');
             return;
         }
 
-        // Now it's safe to set up event listeners
         setupEventListeners();
-        // And then start the application flow
         initializeAppFlow();
     };
 
-    // Run the main function
     main();
 });
