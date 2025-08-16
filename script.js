@@ -1,4 +1,55 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const THEME_KEY = 'markr_theme';
+    const ACCENT_KEY = 'markr_accent_color';
+
+    // Helper function to lighten a hex color for the hover state
+    const lightenHexColor = (hex, amount) => {
+        let usePound = false;
+        if (hex[0] === "#") {
+            hex = hex.slice(1);
+            usePound = true;
+        }
+        const num = parseInt(hex, 16);
+        let r = (num >> 16) + amount;
+        if (r > 255) r = 255;
+        let b = ((num >> 8) & 0x00FF) + amount;
+        if (b > 255) b = 255;
+        let g = (num & 0x0000FF) + amount;
+        if (g > 255) g = 255;
+        return (usePound ? "#" : "") + (g | (b << 8) | (r << 16)).toString(16);
+    };
+
+    const applyTheme = (theme) => {
+        const themeToggle = document.getElementById('theme-toggle');
+        if (theme === 'light') {
+            document.body.classList.add('light-mode');
+            if (themeToggle) themeToggle.checked = true;
+        } else {
+            document.body.classList.remove('light-mode');
+            if (themeToggle) themeToggle.checked = false;
+        }
+    };
+
+    const applyAccentColor = (hexColor) => {
+        const root = document.documentElement;
+        const hoverColor = lightenHexColor(hexColor, 20); // Calculate a hover color
+        root.style.setProperty('--accent-primary', hexColor);
+        root.style.setProperty('--accent-hover', hoverColor);
+
+        // Update active swatch
+        document.querySelectorAll('.color-swatch').forEach(swatch => {
+            swatch.classList.toggle('active', swatch.dataset.color === hexColor);
+        });
+    };
+    
+    // Load and apply saved theme immediately on script start to prevent flashing
+    const savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
+    const savedAccent = localStorage.getItem(ACCENT_KEY) || '#5e6ad2'; // Default accent
+    applyTheme(savedTheme);
+    applyAccentColor(savedAccent);
+
+
+
     // Sanity check for secure context
     if (!window.isSecureContext) {
         const message = "CRITICAL ERROR: The browser does not consider this a secure context.\n\n" +
@@ -462,7 +513,24 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('decimal-scoring').checked = false;
             totalScoreInput.focus(); 
         });
+        // ⬇️ NEW: Theme Control Listeners ⬇️
+        const themeToggle = document.getElementById('theme-toggle');
+        const colorSwatchesContainer = document.getElementById('color-swatches-container');
 
+        themeToggle.addEventListener('change', () => {
+            const newTheme = themeToggle.checked ? 'light' : 'dark';
+            localStorage.setItem(THEME_KEY, newTheme);
+            applyTheme(newTheme);
+        });
+
+        colorSwatchesContainer.addEventListener('click', (e) => {
+            const target = e.target.closest('.color-swatch');
+            if (target) {
+                const newColor = target.dataset.color;
+                localStorage.setItem(ACCENT_KEY, newColor);
+                applyAccentColor(newColor);
+            }
+        });
         // Add a listener to change the step of the score input based on the decimal toggle
         document.getElementById('decimal-scoring').addEventListener('change', (e) => {
             const totalScoreInput = document.getElementById('total-score');

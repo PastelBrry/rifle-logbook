@@ -6,13 +6,14 @@
     <title>Markr - Shooting Log</title>
     <!-- Fonts and Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     
     <link rel="stylesheet" href="style.css">
-    <!-- Chart.js for graphing -->
+    <!-- Chart.js and date adapter -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -40,6 +41,29 @@
             <nav>
                 <a href="#" class="nav-link active"><i data-feather="target"></i> Dashboard</a>
             </nav>
+
+            <!-- Theme Settings Section -->
+            <div class="theme-settings">
+                <div class="theme-option">
+                    <label for="theme-toggle">Light Mode</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="theme-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="theme-option">
+                    <label>Accent Color</label>
+                    <div id="color-swatches-container" class="color-swatches">
+                        <button class="color-swatch active" data-color="#5e6ad2" style="background-color: #5e6ad2;"></button>
+                        <button class="color-swatch" data-color="#3b82f6" style="background-color: #3b82f6;"></button>
+                        <button class="color-swatch" data-color="#14b8a6" style="background-color: #14b8a6;"></button>
+                        <button class="color-swatch" data-color="#84cc16" style="background-color: #84cc16;"></button>
+                        <button class="color-swatch" data-color="#f97316" style="background-color: #f97316;"></button>
+                        <button class="color-swatch" data-color="#ec4899" style="background-color: #ec4899;"></button>
+                    </div>
+                </div>
+            </div>
+
             <div class="sidebar-footer">
                 <div class="user-info">
                     <span id="current-user-display"></span>
@@ -80,7 +104,6 @@
                                     </fieldset>
                                 </div>
                                 <div class="form-group flex-grow">
-                                    <!-- ⬇️ MOVED HERE ⬇️ -->
                                     <label for="ammunition">Ammunition:</label>
                                     <select id="ammunition" name="ammunition">
                                         <option value="CCI">CCI</option>
@@ -97,7 +120,6 @@
                                 <div class="form-group">
                                     <label for="decimal-scoring">Decimals?</label>
                                     <label class="toggle-switch">
-                                        <!-- ⬇️ "checked" attribute removed ⬇️ -->
                                         <input type="checkbox" id="decimal-scoring" name="decimalScoring">
                                         <span class="slider"></span>
                                     </label>
