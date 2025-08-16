@@ -6,7 +6,7 @@
     <title>Markr - Shooting Log</title>
     <!-- Fonts and Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     
@@ -14,13 +14,14 @@
     <!-- Chart.js for graphing -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- ⬇️ ADDED: Firebase SDKs ⬇️ -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-check-compat.js"></script>
 </head>
 <body>
 
-    <!-- Login View - Updated for OAuth -->
+    <!-- Login View -->
     <div id="login-wrapper">
         <div class="login-container">
             <h1>Markr</h1>
@@ -56,14 +57,6 @@
                 <h2><i data-feather="tool"></i> Setup & Measurements</h2>
                 <form id="measurements-form" class="grid-form">
                     <div class="form-group"><label for="rifle">Rifle:</label><input type="text" id="rifle" name="rifle"></div>
-                    <div class="form-group">
-                        <label for="ammunition">Ammunition:</label>
-                        <select id="ammunition" name="ammunition">
-                            <option value="CCI">CCI</option>
-                            <option value="ELEY Training">ELEY Training</option>
-                            <option value="ELEY Match">ELEY Match</option>
-                        </select>
-                    </div>
                     <div class="form-group"><label for="trigger-to-handstop">Trigger to handstop (cm):</label><input type="text" id="trigger-to-handstop" name="triggerToHandstop"></div>
                     <div class="form-group"><label for="trigger-to-buttplate">Trigger to buttplate (cm):</label><input type="text" id="trigger-to-buttplate" name="triggerToButtplate"></div>
                     <div class="form-group"><label for="cheekpiece-height">Cheekpiece height (cm):</label><input type="text" id="cheekpiece-height" name="cheekpieceHeight"></div>
@@ -78,22 +71,34 @@
                     <section id="logging-section" class="card">
                         <h2><i data-feather="plus-circle"></i> Log New Shoot</h2>
                         <form id="log-form">
-                            <div class="form-group">
-                                 <fieldset><legend>Number of Shots:</legend>
-                                    <label><input type="radio" name="shot-count" value="10" checked> 10</label>
-                                    <label><input type="radio" name="shot-count" value="20"> 20</label>
-                                    <label><input type="radio" name="shot-count" value="60"> 60</label>
-                                </fieldset>
+                            <div class="form-row">
+                                <div class="form-group flex-grow">
+                                     <fieldset><legend>Number of Shots:</legend>
+                                        <label><input type="radio" name="shot-count" value="10" checked> 10</label>
+                                        <label><input type="radio" name="shot-count" value="20"> 20</label>
+                                        <label><input type="radio" name="shot-count" value="60"> 60</label>
+                                    </fieldset>
+                                </div>
+                                <div class="form-group flex-grow">
+                                    <!-- ⬇️ MOVED HERE ⬇️ -->
+                                    <label for="ammunition">Ammunition:</label>
+                                    <select id="ammunition" name="ammunition">
+                                        <option value="CCI">CCI</option>
+                                        <option value="ELEY Training">ELEY Training</option>
+                                        <option value="ELEY Match">ELEY Match</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group flex-grow">
                                     <label for="total-score">Total Score:</label>
-                                    <input type="number" id="total-score" step="0.1" required placeholder="e.g., 98.5">
+                                    <input type="number" id="total-score" step="1" required placeholder="e.g., 98">
                                 </div>
                                 <div class="form-group">
                                     <label for="decimal-scoring">Decimals?</label>
                                     <label class="toggle-switch">
-                                        <input type="checkbox" id="decimal-scoring" name="decimalScoring" checked>
+                                        <!-- ⬇️ "checked" attribute removed ⬇️ -->
+                                        <input type="checkbox" id="decimal-scoring" name="decimalScoring">
                                         <span class="slider"></span>
                                     </label>
                                 </div>

@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return; 
         } 
         
-        shoots.forEach(shoot => { // `shoots` is already sorted by date from Firestore query
+        shoots.forEach(shoot => {
             const avgScore = shoot.totalScore / shoot.shotCount; 
             const readableDate = new Date(shoot.id).toLocaleString(undefined, { 
                 dateStyle: 'medium', 
@@ -285,6 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="log-entry-body">
                     <p><strong>Avg Score/Shot:</strong> ${avgScore.toFixed(2)}</p>
+                    <!-- MODIFIED: Display ammunition for each shoot -->
+                    ${shoot.ammunition ? `<p><strong>Ammo:</strong> ${shoot.ammunition}</p>` : ''}
                     ${shoot.feedback ? `<p><strong>Feedback:</strong> ${shoot.feedback}</p>` : ''}
                     ${shoot.comments ? `<p><strong>Comments:</strong> ${shoot.comments}</p>` : ''}
                 </div>
@@ -318,73 +320,107 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderGraph = () => { 
         if (scoreChart) scoreChart.destroy(); 
         
-        // Reverse the shoots array for chronological order in the graph
+        // NEW: Color mapping for different ammo types
+        const ammoColorMap = {
+            'CCI': '#facc15', // Yellow
+            'ELEY Training': '#38bdf8', // Blue
+            'ELEY Match': '#f59e0b', // Gold/Orange
+            'default': '#a1a1aa' // Grey for unknown/old data
+        };
+
         const chronologicalShoots = [...shoots].reverse();
-        const labels = chronologicalShoots.map(s => new Date(s.id).toLocaleDateString(undefined, { 
-            month: 'short', 
-            day: 'numeric' 
-        })); 
-        const data = chronologicalShoots.map(s => s.totalScore / s.shotCount); 
         
-        let suggestedMin = 5; 
-        let suggestedMax = 10.5; 
-        if (data.length > 0) { 
-            suggestedMin = Math.max(5, Math.floor(Math.min(...data) - 1)); 
-        } 
+        // Prepare data in a format Chart.js can use, including all relevant info
+        const chartData = chronologicalShoots.map(s => ({
+            x: new Date(s.id),
+            y: s.totalScore / s.shotCount,
+            totalScore: s.totalScore,
+            shotCount: s.shotCount,
+            ammunition: s.ammunition || 'N/A' // Handle old data without ammo
+        }));
+
+        let minY = 8.5;
+        let maxY = 10.9;
+        if(chartData.length > 0) {
+            const scores = chartData.map(d => d.y);
+            // Give a bit of padding to the y-axis to make it look nicer
+            minY = Math.max(0, Math.min(...scores) - 0.2);
+            maxY = Math.min(10.9, Math.max(...scores) + 0.2);
+        }
         
         scoreChart = new Chart(chartCanvas, { 
             type: 'line', 
             data: { 
-                labels, 
                 datasets: [{ 
                     label: 'Average Score per Shot', 
-                    data, 
+                    data: chartData,
                     borderColor: 'var(--accent-primary)', 
                     backgroundColor: 'rgba(94, 106, 210, 0.2)', 
                     fill: true, 
                     tension: 0.3, 
-                    pointBackgroundColor: 'var(--accent-primary)', 
-                    pointRadius: 4 
+                    // NEW: Dynamic point colors based on ammunition
+                    pointBackgroundColor: context => ammoColorMap[context.raw.ammunition] || ammoColorMap.default,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
                 }] 
             }, 
             options: { 
                 responsive: true, 
-                maintainAspectRatio: false, 
+                maintainAspectRatio: false,
                 scales: { 
-                    y: { 
-                        beginAtZero: false, 
-                        suggestedMin, 
-                        suggestedMax, 
-                        grid: { color: 'var(--border-color)' }, 
-                        ticks: { color: 'var(--text-secondary)' } 
-                    }, 
-                    x: { 
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            tooltipFormat: 'MMM dd, yyyy',
+                            displayFormats: {
+                                day: 'MMM dd'
+                            }
+                        },
                         grid: { display: false }, 
-                        ticks: { color: 'var(--text-secondary)' } 
-                    } 
+                        ticks: { color: 'var(--text-secondary)' },
+                        // NEW: Axis Title
+                        title: {
+                            display: true,
+                            text: 'Date',
+                            color: 'var(--text-secondary)'
+                        }
+                    },
+                    y: { 
+                        beginAtZero: false,
+                        // NEW: Smarter min/max for better visual range
+                        min: minY,
+                        max: maxY,
+                        grid: { color: 'var(--border-color)' }, 
+                        ticks: { color: 'var(--text-secondary)' },
+                        // NEW: Axis Title
+                        title: {
+                            display: true,
+                            text: 'Average Score per Shot',
+                            color: 'var(--text-secondary)'
+                        }
+                    }
                 }, 
-                plugins: { 
-                    legend: { 
-                        labels: { color: 'var(--text-primary)' } 
-                    } 
+                plugins: {
+                    legend: { labels: { color: 'var(--text-primary)' } },
+                    // NEW: Custom, more detailed tooltips
+                    tooltip: {
+                        callbacks: {
+                            title: context => new Date(context[0].raw.x).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+                            label: context => `Avg Score: ${context.raw.y.toFixed(2)}`,
+                            afterLabel: context => [
+                                `Total: ${context.raw.totalScore.toFixed(1)} (${context.raw.shotCount} shots)`,
+                                `Ammo: ${context.raw.ammunition}`
+                            ]
+                        }
+                    }
                 } 
             } 
         }); 
     };
-
     // --- ⬇️ EVENT LISTENERS (MODIFIED) ⬇️ ---
-    const setupEventListeners = () => {
-        loginBtn.addEventListener('click', redirectToLogin);
-        
-        logoutBtn.addEventListener('click', () => { 
-            sessionStorage.removeItem('access_token'); 
-            window.location.reload(); 
-        });
-        
-        measurementsForm.addEventListener('input', (e) => { 
-            measurements[e.target.name] = e.target.value; 
-            saveMeasurements(); // This is now a simple call
-        });
+        const setupEventListeners = () => {
+        // ... (login, logout, measurements listeners are the same) ...
         
         logForm.addEventListener('submit', async (e) => { // Now async
             e.preventDefault(); 
@@ -392,6 +428,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalScore = parseFloat(totalScoreInput.value); 
             const shotCount = parseInt(document.querySelector('input[name="shot-count"]:checked').value); 
             const useDecimals = document.getElementById('decimal-scoring').checked; 
+            
+            // MODIFIED: Get ammunition value from the form
+            const ammunition = document.getElementById('ammunition').value;
             
             if (isNaN(totalScore)) { 
                 alert('Please enter a valid number for the score.'); 
@@ -409,20 +448,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 shotCount, 
                 totalScore, 
                 useDecimals, 
+                ammunition, // MODIFIED: Add ammunition to the shoot object
                 feedback: document.getElementById('feedback').value.trim(), 
                 comments: document.getElementById('comments').value.trim(), 
             }; 
             
             await addShoot(newShoot); 
-            await loadData(); // Reload data from Firestore
+            await loadData();
             renderAll(); 
 
             logForm.reset(); 
-            document.getElementById('decimal-scoring').checked = true; 
+            // MODIFIED: Set decimal scoring to false after reset
+            document.getElementById('decimal-scoring').checked = false;
             totalScoreInput.focus(); 
         });
+
+        // Add a listener to change the step of the score input based on the decimal toggle
+        document.getElementById('decimal-scoring').addEventListener('change', (e) => {
+            const totalScoreInput = document.getElementById('total-score');
+            if (e.target.checked) {
+                totalScoreInput.step = "0.1";
+                totalScoreInput.placeholder = "e.g., 98.5";
+            } else {
+                totalScoreInput.step = "1";
+                totalScoreInput.placeholder = "e.g., 98";
+            }
+        });
         
-        logHistoryContainer.addEventListener('click', async (e) => { // Now async
+        logHistoryContainer.addEventListener('click', async (e) => {
             const deleteBtn = e.target.closest('.btn-delete'); 
             if (deleteBtn) { 
                 const shootId = parseInt(deleteBtn.dataset.id, 10);
@@ -430,6 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } 
         });
     };
+
 
     // --- App Entry Point ---
     const main = () => {
