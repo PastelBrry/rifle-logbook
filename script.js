@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- OAuth 2.0 Configuration ---
     const OAUTH_CONFIG = {
         clientId: '01k2ps6rwmewxtr69wqad8j41a', 
-        redirectUri: 'https://your-username.github.io/markr-app/index.html', // 👈 UPDATE THIS
+        redirectUri: 'https://pastelbrry.github.io/rifle-logbook/', // 👈 UPDATE THIS
         authorizationEndpoint: 'https://auth.sbhs.net.au/authorize',
         tokenEndpoint: 'https://auth.sbhs.net.au/token',
         apiEndpoint: 'https://student.sbhs.net.au/api/details/userinfo.json',
